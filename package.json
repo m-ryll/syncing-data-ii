@@ -1,0 +1,17 @@
+{
+  "name": "syncing-data-ii",
+  "version": "1.0.0",
+  "description": "The second syncing data assignment.",
+  "main": "/src/server.js",
+  "scripts": {
+    "start": "node ./src/server.js",
+    "pretest": "jshint ./src",
+    "test": "echo \"Tests complete\""
+  },
+  "author": "Mandy R",
+  "license": "ISC",
+  "dependencies": {
+    "jshint": "^2.9.1",
+    "socket.io": "^1.4.5"
+  }
+}

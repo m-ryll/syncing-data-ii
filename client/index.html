@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+	<head>
+		<title>:) :) :) Smiley Land :) :) :)</title>
+		<meta charset="utf-8" />
+		<script src="/socket.io/socket.io.js"></script>
+		<script type="text/javascript">
+			"use strict";
+			var canvas;
+			var ctx;
+			var socket;
+			var draws = {};
+			var user = "user" + (Math.floor((Math.random()*1000)) + 1);
+			var numToAddX = 0;
+			var numToAddY = 0;
+
+			// Create a new user object in the draws object at a random position.
+			function setup() {
+				var time = new Date().getTime();
+				var x = Math.floor((Math.random()*ctx.canvas.width) + 1); // random x
+				var y = Math.floor((Math.random()*ctx.canvas.height) + 1); // random y
+				draws[user] = {lastUpdate: time, x: x, y: y, width: 25, height: 50};
+
+				// Redraw new coords every .01 second.
+				setInterval(function() {
+					var time = new Date().getTime();
+
+					draws[user].lastUpdate = time;
+					draws[user].x += numToAddX;
+					draws[user].y += numToAddY;
+					socket.emit("draw", {name: user, coords: draws[user]});
+
+					draw();
+					numToAddY = 0;
+					numToAddX = 0;
+				}, 10);
+			}
+
+			function getRandomColor() {
+				var red = Math.floor((Math.random()*255));
+				var green = Math.floor((Math.random()*255));
+				var blue = Math.floor((Math.random()*255));
+				return "rgb(" + red + "," + green + "," + blue + ")";
+			}
+
+			// Send the data to the canvas.
+			function draw() {
+				ctx.clearRect(0,0,canvas.width,canvas.height);
+				// Draw background.
+				ctx.fillStyle = "black";
+				//ctx.fillStyle = getRandomColor(); ///////////////////// Uncomment for party mode! (epilepsy warning)
+   				ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+				// Draw happy smileys. :)
+				var keys = Object.keys(draws);
+				for (var i = 0; i < keys.length; i++) {
+					if (keys[i] == user) {
+						ctx.fillStyle = "yellow";
+					} else {
+						ctx.fillStyle = "blue";
+					}
+					ctx.strokeStyle = "black";
+
+					var drawCall = draws[keys[i]];
+					//ctx.fillRect(drawCall.x, drawCall.y, drawCall.width, drawCall.height);
+					// Draw body.
+					ctx.beginPath();
+					ctx.arc(drawCall.x,drawCall.y,drawCall.width,0,2*Math.PI);
+					ctx.fill();
+					ctx.stroke();
+
+					// Draw left eye.
+					ctx.beginPath();
+					ctx.arc(drawCall.x - 8, drawCall.y - 5, drawCall.width / 6, 0, 2*Math.PI);
+					ctx.fillStyle = "black";
+					ctx.fill();
+
+					// Draw right eye.
+					ctx.beginPath();
+					ctx.arc(drawCall.x + 8, drawCall.y - 5, drawCall.width / 6, 0, 2*Math.PI);
+					ctx.fillStyle = "black";
+					ctx.fill();	
+
+					// Draw smile.
+					ctx.beginPath();
+					ctx.arc(drawCall.x, drawCall.y + 3, drawCall.width / 2, 0, Math.PI);
+					ctx.stroke();	
+
+					// Draw username.
+					ctx.font = "15px Arial";
+					ctx.fillStyle = "white";
+					ctx.textAlign = "center";
+					if (keys[i] == user) {
+						ctx.fillText("me",drawCall.x,drawCall.y - 30);
+					} else {
+						ctx.fillText(keys[i],drawCall.x,drawCall.y - 30);
+					}
+				}
+			}
+
+			// Handle keyboard input to move characters.
+			function handleInput(e) {
+				if (e.keyCode == 37) {
+					numToAddX = -5;
+				}
+				if (e.keyCode == 38) {
+					numToAddY = -5;
+				}
+				if (e.keyCode == 39) {
+					numToAddX = 5;
+				}
+				if (e.keyCode == 40) {
+					numToAddY = 5;
+				}
+			}
+
+			// Initialize server events.
+			function init() {
+				canvas = document.querySelector("#canvas");
+				ctx = canvas.getContext("2d");
+				socket = io.connect();
+
+				socket.on("connect", function() {
+					setup();
+					socket.emit("join", {name: user, coords: draws[user]});
+				});
+				socket.on("handleMessage", function(data) {
+					if (!draws[data.name]) {
+						draws[data.name] = data.coords;
+					} else if (data.coords.lastUpdate > draws[data.name].lastUpdate) {
+						draws[data.name] = data.coords;
+					}
+
+					draw(); // redraw after updates
+				});
+				window.addEventListener("keydown", handleInput, false);
+			}
+
+			window.onload = init;
+		</script>
+		<style type="text/css">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas" width="512" height="512">Please use an HTML5 browser.</canvas>
+	</body>
+</html>
